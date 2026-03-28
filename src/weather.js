@@ -11,48 +11,47 @@ function wmoToCondition(code) {
   return 'cloudy'
 }
 
-// Returns leaf color palettes based on temp + condition
 function weatherToVisuals(tempC, condition, windspeedKmh) {
-  // --- leaf palettes ---
+  // --- muted ink-wash leaf palettes ---
   const palettes = {
     summer: [
-      { f: '#5DCAA5', v: '#0a3d29' },
-      { f: '#3a9e70', v: '#0a3d29' },
-      { f: '#9FE1CB', v: '#0a3d29' },
-      { f: '#1D9E75', v: '#04342C' },
+      { f: '#8aaa7e', v: '#4a5e42' },
+      { f: '#6b8c62', v: '#3d5235' },
+      { f: '#a3b89a', v: '#5a6e52' },
+      { f: '#7a9970', v: '#445a3c' },
     ],
     transition: [
-      { f: '#97C459', v: '#27500A' },
-      { f: '#EF9F27', v: '#6b3a00' },
-      { f: '#5DCAA5', v: '#0a3d29' },
-      { f: '#FAC775', v: '#633806' },
+      { f: '#9aaa6e', v: '#5a6438' },
+      { f: '#c4a060', v: '#7a5e30' },
+      { f: '#8aaa7e', v: '#4a5e42' },
+      { f: '#d4b878', v: '#8a6e3a' },
     ],
     autumn: [
-      { f: '#EF9F27', v: '#6b3a00' },
-      { f: '#D85A30', v: '#4A1B0C' },
-      { f: '#FAC775', v: '#633806' },
-      { f: '#BA7517', v: '#412402' },
+      { f: '#c4a060', v: '#7a5e30' },
+      { f: '#b07050', v: '#6a3a28' },
+      { f: '#d4b878', v: '#8a6e3a' },
+      { f: '#a08040', v: '#604a20' },
     ],
     winter: [
-      { f: '#B4B2A9', v: '#444441' },
-      { f: '#9FE1CB', v: '#085041' },
-      { f: '#D3D1C7', v: '#5F5E5A' },
-      { f: '#85B7EB', v: '#0C447C' },
+      { f: '#9a9890', v: '#5e5c58' },
+      { f: '#8aaaa0', v: '#4a6a60' },
+      { f: '#b0aea6', v: '#6e6c68' },
+      { f: '#7a9ab0', v: '#3a5a70' },
     ],
     snow: [
-      { f: '#D3D1C7', v: '#5F5E5A' },
-      { f: '#E6F1FB', v: '#185FA5' },
-      { f: '#F1EFE8', v: '#888780' },
+      { f: '#b0aea6', v: '#6e6c68' },
+      { f: '#bcc8d4', v: '#6a7a8a' },
+      { f: '#c8c6be', v: '#8a8880' },
     ],
     storm: [
-      { f: '#085041', v: '#04342C' },
-      { f: '#0F6E56', v: '#04342C' },
-      { f: '#3B6D11', v: '#173404' },
+      { f: '#4a6a5a', v: '#2a3e32' },
+      { f: '#5a7a68', v: '#2a3e32' },
+      { f: '#607a4a', v: '#344428' },
     ],
     fog: [
-      { f: '#888780', v: '#444441' },
-      { f: '#B4B2A9', v: '#5F5E5A' },
-      { f: '#D3D1C7', v: '#5F5E5A' },
+      { f: '#908e86', v: '#5e5c58' },
+      { f: '#a8a69e', v: '#6e6c68' },
+      { f: '#b8b6ae', v: '#7a7870' },
     ],
   }
 
@@ -69,36 +68,42 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
   else if (condition === 'storm') palette = palettes.storm
   else if (condition === 'fog') palette = palettes.fog
   else if (condition === 'rain') {
-    // rain desaturates the base season
     palette = palettes[season].map(c => ({ ...c }))
   } else {
     palette = palettes[season]
   }
 
-  // --- background sky color ---
-  const backgrounds = {
-    clear: tempC > 15 ? '#0d1a10' : '#0d1218',
-    cloudy: '#0e1416',
-    fog: '#141616',
-    rain: '#0a1014',
-    snow: '#0f1318',
-    storm: '#080d0a',
-  }
-  const bg = backgrounds[condition] || '#0d1a12'
+  // --- parchment background (same base, sky wash drawn on canvas) ---
+  const bg = '#f4f0e8'
 
-  // --- ground glow ---
-  const glows = {
-    clear: tempC > 15 ? 'rgba(30,80,40,.22)' : 'rgba(20,50,40,.15)',
-    cloudy: 'rgba(20,40,30,.10)',
-    fog: 'rgba(30,40,30,.08)',
-    rain: 'rgba(10,30,20,.08)',
-    snow: 'rgba(40,60,70,.12)',
-    storm: 'rgba(5,20,10,.06)',
+  // --- sky wash colors (drawn as gradient on canvas top) ---
+  const skyWash = {
+    clear: tempC > 15
+      ? 'rgba(42, 38, 34, 0.0)'
+      : 'rgba(42, 38, 34, 0.02)',
+    cloudy: 'rgba(42, 38, 34, 0.06)',
+    fog: 'rgba(42, 38, 34, 0.08)',
+    rain: 'rgba(42, 38, 34, 0.10)',
+    snow: 'rgba(60, 65, 80, 0.06)',
+    storm: 'rgba(42, 38, 34, 0.14)',
   }
-  const glow = glows[condition] || 'rgba(30,80,40,.18)'
+
+  // --- ground ink bleed color ---
+  const groundBleed = {
+    clear: tempC > 15
+      ? 'rgba(42, 38, 34, 0.06)'
+      : 'rgba(42, 38, 34, 0.04)',
+    cloudy: 'rgba(42, 38, 34, 0.05)',
+    fog: 'rgba(42, 38, 34, 0.03)',
+    rain: 'rgba(42, 38, 34, 0.04)',
+    snow: 'rgba(60, 65, 80, 0.04)',
+    storm: 'rgba(42, 38, 34, 0.03)',
+  }
+
+  const sky = skyWash[condition] || 'rgba(42, 38, 34, 0.0)'
+  const ground = groundBleed[condition] || 'rgba(42, 38, 34, 0.04)'
 
   // --- sway speed multiplier from wind ---
-  // windspeed 0–10 → 1.0x, 10–30 → up to 0.5x (faster), 30+ → 0.3x
   const swayMultiplier = windspeedKmh < 10
     ? 1.0
     : windspeedKmh < 30
@@ -107,16 +112,15 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
 
   // --- particles ---
   let particles = 'none'
-  if (condition === 'rain' || condition === 'storm') particles = 'rain'
+  if (condition === 'rain' || condition === 'storm') particles = condition === 'storm' ? 'storm' : 'rain'
   if (condition === 'snow') particles = 'snow'
   if (condition === 'fog') particles = 'fog'
 
-  return { palette, bg, glow, swayMultiplier, particles, condition, tempC }
+  return { palette, bg, sky, ground, swayMultiplier, particles, condition, tempC }
 }
 
 export async function fetchWeatherVisuals() {
   try {
-    // 1. get coordinates
     const coords = await new Promise((resolve, reject) => {
       if (!navigator.geolocation) { reject(new Error('no geo')); return }
       navigator.geolocation.getCurrentPosition(
@@ -126,7 +130,6 @@ export async function fetchWeatherVisuals() {
       )
     })
 
-    // 2. fetch Open-Meteo (no key required)
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weathercode,windspeed_10m&timezone=auto`
     const res = await fetch(url)
     const data = await res.json()
@@ -135,7 +138,6 @@ export async function fetchWeatherVisuals() {
     const condition = wmoToCondition(code)
     return weatherToVisuals(temp, condition, wind)
   } catch (_) {
-    // fallback — neutral green, no particles
     return weatherToVisuals(15, 'clear', 5)
   }
 }

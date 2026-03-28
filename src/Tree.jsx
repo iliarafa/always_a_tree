@@ -13,12 +13,13 @@ async function haptic(style = ImpactStyle.Medium) {
 
 const DEFAULT_VISUALS = {
   palette: [
-    { f: '#5DCAA5', v: '#0a3d29' },
-    { f: '#9FE1CB', v: '#0a3d29' },
-    { f: '#3a9e70', v: '#0a3d29' },
+    { f: '#8aaa7e', v: '#4a5e42' },
+    { f: '#a3b89a', v: '#5a6e52' },
+    { f: '#6b8c62', v: '#3d5235' },
   ],
-  bg: '#0d1a12',
-  glow: 'rgba(30,80,40,.18)',
+  bg: '#f4f0e8',
+  sky: 'rgba(42, 38, 34, 0.0)',
+  ground: 'rgba(42, 38, 34, 0.04)',
   swayMultiplier: 1,
   particles: 'none',
 }
