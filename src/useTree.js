@@ -34,7 +34,7 @@ function buildTree(rng) {
       branch(ex, ey, windAngle, len * lrL * 0.9, d - 2)
     }
   }
-  branch(W / 2, H, -Math.PI / 2, 130, 8)
+  branch(W / 2, H, -Math.PI / 2, 165, 8)
   return { segs, tips }
 }
 
