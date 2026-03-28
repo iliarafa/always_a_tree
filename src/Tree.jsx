@@ -17,12 +17,12 @@ const DEFAULT_VISUALS = {
     { f: '#a3b89a', v: '#5a6e52' },
     { f: '#6b8c62', v: '#3d5235' },
   ],
-  bg: '#f4f0e8',
-  sky: 'rgba(42, 38, 34, 0.0)',
-  ground: 'rgba(42, 38, 34, 0.04)',
+  bg: 'linear-gradient(to bottom, #87CEEB, #d4eaf7)',
   swayMultiplier: 1,
   particles: 'none',
   condition: 'clear',
+  timeOfDay: 'day',
+  ink: { r: 42, g: 38, b: 34 },
 }
 
 function getSession() {
@@ -327,8 +327,8 @@ export function Tree() {
 
     // if no previous visuals, draw immediately
     if (!prevVisualsRef.current) {
-      drawTree(cx, segs, W, H, visuals.sky, visuals.ground, visuals.condition)
-      prevVisualsRef.current = { sky: visuals.sky, ground: visuals.ground }
+      drawTree(cx, segs, W, H, visuals.condition, visuals.timeOfDay, visuals.ink)
+      prevVisualsRef.current = { timeOfDay: visuals.timeOfDay, ink: visuals.ink }
       return
     }
 
@@ -341,20 +341,20 @@ export function Tree() {
     function animate(now) {
       const t = Math.min((now - start) / duration, 1)
       cx.globalAlpha = 1
-      drawTree(cx, segs, W, H, prev.sky, prev.ground, visuals.condition)
+      drawTree(cx, segs, W, H, visuals.condition, prev.timeOfDay, prev.ink)
       if (t < 1) {
         cx.globalAlpha = t
-        drawTree(cx, segs, W, H, visuals.sky, visuals.ground, visuals.condition)
+        drawTree(cx, segs, W, H, visuals.condition, visuals.timeOfDay, visuals.ink)
         cx.globalAlpha = 1
         transitionRef.current = requestAnimationFrame(animate)
       } else {
-        drawTree(cx, segs, W, H, visuals.sky, visuals.ground, visuals.condition)
-        prevVisualsRef.current = { sky: visuals.sky, ground: visuals.ground }
+        drawTree(cx, segs, W, H, visuals.condition, visuals.timeOfDay, visuals.ink)
+        prevVisualsRef.current = { timeOfDay: visuals.timeOfDay, ink: visuals.ink }
       }
     }
     transitionRef.current = requestAnimationFrame(animate)
     return () => { if (transitionRef.current) cancelAnimationFrame(transitionRef.current) }
-  }, [segs, W, H, visuals.sky, visuals.ground, visuals.condition])
+  }, [segs, W, H, visuals.condition, visuals.timeOfDay, visuals.ink])
 
   useEffect(() => {
     fetchWeatherVisuals().then(v => setVisuals(v))
@@ -422,7 +422,15 @@ export function Tree() {
   }
 
   return (
-    <div className={styles.wrap} style={{ background: visuals.bg, transition: 'background 2.5s ease' }} onClick={() => setInputOpen(false)}>
+    <div
+      className={styles.wrap}
+      style={{
+        background: visuals.bg,
+        transition: 'background 2.5s ease',
+        '--ink': `${visuals.ink.r}, ${visuals.ink.g}, ${visuals.ink.b}`,
+      }}
+      onClick={() => setInputOpen(false)}
+    >
       <canvas ref={canvasRef} className={styles.canvas} width={W} height={H} />
       <Particles type={visuals.particles} layer="back" W={W} H={H} segs={segs} tips={tips} />
       <div className={styles.leafLayer}>
@@ -459,7 +467,7 @@ export function Tree() {
           <path
             d="M12,2 A10,10 0 1,1 8,3.5"
             fill="none"
-            stroke="rgba(42, 38, 34, 0.3)"
+            stroke={`rgba(${visuals.ink.r}, ${visuals.ink.g}, ${visuals.ink.b}, 0.3)`}
             strokeWidth="1.5"
             strokeLinecap="round"
           />
