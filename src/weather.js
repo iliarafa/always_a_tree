@@ -11,7 +11,56 @@ function wmoToCondition(code) {
   return 'cloudy'
 }
 
-function weatherToVisuals(tempC, condition, windspeedKmh) {
+function computeTimeOfDay(sunriseStr, sunsetStr) {
+  if (!sunriseStr || !sunsetStr) return 'day'
+  const now = Date.now()
+  const sunrise = new Date(sunriseStr).getTime()
+  const sunset = new Date(sunsetStr).getTime()
+  const margin = 40 * 60 * 1000
+  if (now >= sunrise - margin && now < sunrise + margin) return 'dawn'
+  if (now >= sunrise + margin && now < sunset - margin) return 'day'
+  if (now >= sunset - margin && now < sunset + margin) return 'dusk'
+  return 'night'
+}
+
+function skyGradient(timeOfDay, condition) {
+  const clearSky = {
+    day:   'linear-gradient(to bottom, #87CEEB, #d4eaf7)',
+    dawn:  'linear-gradient(to bottom, #f7b267, #f7d6a8, #87CEEB)',
+    dusk:  'linear-gradient(to bottom, #e85d4a, #f0a060, #2a2a4a)',
+    night: 'linear-gradient(to bottom, #0a0e1a, #141830)',
+  }
+  const weatherDay = {
+    cloudy: 'linear-gradient(to bottom, #9eaab4, #c8cdd2)',
+    rain:   'linear-gradient(to bottom, #6e7a84, #a0a8b0)',
+    storm:  'linear-gradient(to bottom, #3a3e48, #5a5e68)',
+    snow:   'linear-gradient(to bottom, #c8d0d8, #e0e4e8)',
+    fog:    'linear-gradient(to bottom, #b0b8be, #d0d4d8)',
+  }
+  const weatherNight = {
+    cloudy: 'linear-gradient(to bottom, #1a1e28, #2a2e38)',
+    rain:   'linear-gradient(to bottom, #10141e, #1e222c)',
+    storm:  'linear-gradient(to bottom, #08080e, #141418)',
+    snow:   'linear-gradient(to bottom, #1e2230, #2a2e3c)',
+    fog:    'linear-gradient(to bottom, #181c24, #282c34)',
+  }
+  if (condition === 'clear') return clearSky[timeOfDay]
+  const isNight = timeOfDay === 'night'
+  const base = isNight ? weatherNight[condition] : weatherDay[condition]
+  if (!base) return clearSky[timeOfDay]
+  return base
+}
+
+function inkColor(timeOfDay, condition) {
+  const dark = (timeOfDay === 'night') ||
+    (condition === 'storm') ||
+    (timeOfDay === 'dusk' && condition !== 'clear')
+  return dark
+    ? { r: 180, g: 175, b: 168 }
+    : { r: 42, g: 38, b: 34 }
+}
+
+function weatherToVisuals(tempC, condition, windspeedKmh, sunriseStr, sunsetStr) {
   // --- muted ink-wash leaf palettes ---
   const palettes = {
     summer: [
@@ -73,36 +122,6 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
     palette = palettes[season]
   }
 
-  // --- parchment background (same base, sky wash drawn on canvas) ---
-  const bg = '#f4f0e8'
-
-  // --- sky wash colors (drawn as gradient on canvas top) ---
-  const skyWash = {
-    clear: tempC > 15
-      ? 'rgba(42, 38, 34, 0.0)'
-      : 'rgba(42, 38, 34, 0.02)',
-    cloudy: 'rgba(42, 38, 34, 0.06)',
-    fog: 'rgba(42, 38, 34, 0.08)',
-    rain: 'rgba(42, 38, 34, 0.10)',
-    snow: 'rgba(60, 65, 80, 0.06)',
-    storm: 'rgba(42, 38, 34, 0.14)',
-  }
-
-  // --- ground ink bleed color ---
-  const groundBleed = {
-    clear: tempC > 15
-      ? 'rgba(42, 38, 34, 0.06)'
-      : 'rgba(42, 38, 34, 0.04)',
-    cloudy: 'rgba(42, 38, 34, 0.05)',
-    fog: 'rgba(42, 38, 34, 0.03)',
-    rain: 'rgba(42, 38, 34, 0.04)',
-    snow: 'rgba(60, 65, 80, 0.04)',
-    storm: 'rgba(42, 38, 34, 0.03)',
-  }
-
-  const sky = skyWash[condition] || 'rgba(42, 38, 34, 0.0)'
-  const ground = groundBleed[condition] || 'rgba(42, 38, 34, 0.04)'
-
   // --- sway speed multiplier from wind ---
   const swayMultiplier = windspeedKmh < 10
     ? 1.0
@@ -116,7 +135,18 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
   if (condition === 'snow') particles = 'snow'
   if (condition === 'fog') particles = 'fog'
 
-  return { palette, bg, sky, ground, swayMultiplier, particles, condition, tempC }
+  const timeOfDay = computeTimeOfDay(sunriseStr, sunsetStr)
+
+  return {
+    palette,
+    bg: skyGradient(timeOfDay, condition),
+    swayMultiplier,
+    particles,
+    condition,
+    tempC,
+    timeOfDay,
+    ink: inkColor(timeOfDay, condition),
+  }
 }
 
 export async function fetchWeatherVisuals() {
@@ -130,14 +160,14 @@ export async function fetchWeatherVisuals() {
       )
     })
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weathercode,windspeed_10m&timezone=auto`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weathercode,windspeed_10m,is_day&daily=sunrise,sunset&timezone=auto`
     const res = await fetch(url)
     const data = await res.json()
     const { temperature_2m: temp, weathercode: code, windspeed_10m: wind } = data.current
-
+    const { sunrise: [sunriseStr], sunset: [sunsetStr] } = data.daily
     const condition = wmoToCondition(code)
-    return weatherToVisuals(temp, condition, wind)
+    return weatherToVisuals(temp, condition, wind, sunriseStr, sunsetStr)
   } catch (_) {
-    return weatherToVisuals(15, 'clear', 5)
+    return weatherToVisuals(15, 'clear', 5, null, null)
   }
 }
