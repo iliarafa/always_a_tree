@@ -11,8 +11,8 @@
 }
 
 @keyframes inkBloom {
-  0%   { opacity: 0; }
-  100% { opacity: 1; }
+  0%   { opacity: 0; filter: blur(2px); }
+  100% { opacity: 1; filter: blur(0px); }
 }
 
 @keyframes sway1 { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }

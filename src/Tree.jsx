@@ -113,18 +113,23 @@ export function Tree() {
       return
     }
 
-    // animate canvas redraw with a fade
+    // crossfade: draw old state, overlay new state with increasing alpha
     if (transitionRef.current) cancelAnimationFrame(transitionRef.current)
+    const prev = prevVisualsRef.current
     const duration = 2500
     const start = performance.now()
 
     function animate(now) {
       const t = Math.min((now - start) / duration, 1)
       cx.globalAlpha = 1
-      drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+      drawTree(cx, segs, W, H, prev.sky, prev.ground)
       if (t < 1) {
+        cx.globalAlpha = t
+        drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+        cx.globalAlpha = 1
         transitionRef.current = requestAnimationFrame(animate)
       } else {
+        drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
         prevVisualsRef.current = { sky: visuals.sky, ground: visuals.ground }
       }
     }
