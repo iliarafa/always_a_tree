@@ -30,19 +30,59 @@ function getSession() {
   return id
 }
 
-function drawTree(cx, segs, W, H, glow) {
+function drawTree(cx, segs, W, H, sky, ground) {
   cx.clearRect(0, 0, W, H)
-  const grd = cx.createRadialGradient(W / 2, H, 0, W / 2, H, 90)
-  grd.addColorStop(0, glow)
+
+  // sky wash — faint ink gradient bleeding from top
+  if (sky && sky !== 'rgba(42, 38, 34, 0.0)') {
+    const skyGrd = cx.createLinearGradient(0, 0, 0, H * 0.5)
+    skyGrd.addColorStop(0, sky)
+    skyGrd.addColorStop(1, 'rgba(0,0,0,0)')
+    cx.fillStyle = skyGrd
+    cx.fillRect(0, 0, W, H * 0.5)
+  }
+
+  // ground ink bleed — soft radial bleed at tree base
+  const grd = cx.createRadialGradient(W / 2, H, 0, W / 2, H, 120)
+  grd.addColorStop(0, ground)
   grd.addColorStop(1, 'rgba(0,0,0,0)')
   cx.fillStyle = grd
-  cx.fillRect(0, H - 90, W, 90)
-  cx.lineCap = 'round'
+  cx.fillRect(0, H - 120, W, 120)
+
+  // ink brushstroke branches
   segs.forEach(s => {
-    const t = s.d / 7
-    cx.lineWidth = Math.max(.8, s.d * 1.4)
-    cx.strokeStyle = `rgb(${~~(55 + t * 45)},${~~(30 + t * 22)},${~~(12 + t * 10)})`
-    cx.beginPath(); cx.moveTo(s.x1, s.y1); cx.lineTo(s.x2, s.y2); cx.stroke()
+    const t = s.d / 7 // 0 at tips, 1 at trunk
+    const baseAlpha = 0.25 + t * 0.55 // tips faint, trunk dark
+    const baseWidth = Math.max(0.6, s.d * 1.8) // thicker at trunk
+
+    const dx = s.x2 - s.x1
+    const dy = s.y2 - s.y1
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len < 0.5) return
+
+    // perpendicular direction for width offset
+    const nx = -dy / len
+    const ny = dx / len
+
+    // wobble for hand-drawn feel (deterministic from position)
+    const wobble = Math.sin(s.x1 * 0.3 + s.y1 * 0.5) * 0.6
+
+    // taper: thick at start, thin at end
+    const w1 = baseWidth * 0.9 + wobble * 0.2
+    const w2 = baseWidth * 0.25
+
+    // draw as filled quadrilateral with slight curve
+    const mx = (s.x1 + s.x2) / 2 + nx * wobble
+    const my = (s.y1 + s.y2) / 2 + ny * wobble
+
+    cx.fillStyle = `rgba(42, 38, 34, ${baseAlpha.toFixed(3)})`
+    cx.beginPath()
+    cx.moveTo(s.x1 + nx * w1, s.y1 + ny * w1)
+    cx.quadraticCurveTo(mx + nx * (w1 + w2) / 2, my + ny * (w1 + w2) / 2, s.x2 + nx * w2, s.y2 + ny * w2)
+    cx.lineTo(s.x2 - nx * w2, s.y2 - ny * w2)
+    cx.quadraticCurveTo(mx - nx * (w1 + w2) / 2, my - ny * (w1 + w2) / 2, s.x1 - nx * w1, s.y1 - ny * w1)
+    cx.closePath()
+    cx.fill()
   })
 }
 
@@ -61,8 +101,8 @@ export function Tree() {
     const cv = canvasRef.current
     if (!cv) return
     const cx = cv.getContext('2d')
-    drawTree(cx, segs, W, H, visuals.glow)
-  }, [segs, W, H, visuals.glow])
+    drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+  }, [segs, W, H, visuals.sky, visuals.ground])
 
   useEffect(() => {
     fetchWeatherVisuals().then(v => setVisuals(v))
