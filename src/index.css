@@ -9,5 +9,10 @@ html, body, #root {
   height: 100%;
   min-height: 100dvh;
   overflow: hidden;
-  background: #0d1a12;
+  background: #f4f0e8;
+  background-image:
+    repeating-conic-gradient(rgba(120, 110, 100, 0.03) 0% 25%, transparent 0% 50%),
+    repeating-conic-gradient(rgba(120, 110, 100, 0.02) 0% 25%, transparent 0% 50%);
+  background-size: 4px 4px, 7px 7px;
+  background-position: 0 0, 3px 3px;
 }
