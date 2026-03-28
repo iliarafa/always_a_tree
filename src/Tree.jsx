@@ -203,12 +203,14 @@ function drawTree(cx, segs, W, H, condition, timeOfDay, ink) {
   })
 }
 
-function Ambient({ condition }) {
+function Ambient({ condition, timeOfDay }) {
   const ref = useRef()
   const frameRef = useRef()
 
   useEffect(() => {
-    if (!condition || condition === 'clear' || condition === 'cloudy') return
+    const needsEffect = condition === 'storm' || condition === 'fog' || condition === 'snow' ||
+      (timeOfDay === 'night' && condition === 'clear')
+    if (!needsEffect) return
     const el = ref.current
     if (!el) return
 
@@ -219,13 +221,43 @@ function Ambient({ condition }) {
     let fogPhase = Math.random() * Math.PI * 2
 
     function tick(now) {
+      // night + clear: star twinkle overlay
+      if (timeOfDay === 'night' && condition === 'clear') {
+        const canvas = el.querySelector('canvas')
+        if (canvas) {
+          const cx = canvas.getContext('2d')
+          cx.clearRect(0, 0, canvas.width, canvas.height)
+          const rng2 = makeRng(31337)
+          for (let i = 0; i < 25; i++) {
+            const x = rng2() * canvas.width
+            const y = rng2() * canvas.height * 0.4
+            const r = 0.5 + rng2() * 1.0
+            const baseAlpha = 0.4 + rng2() * 0.4
+            const period = 3000 + i * 130
+            const twinkle = Math.sin(now / period + i * 1.7) * 0.3
+            const alpha = Math.max(0, baseAlpha + twinkle)
+            cx.beginPath()
+            cx.arc(x, y, r + 0.3, 0, Math.PI * 2)
+            cx.fillStyle = `rgba(220, 225, 240, ${(alpha * 0.5).toFixed(3)})`
+            cx.fill()
+          }
+        }
+      }
+
       // storm: lightning flash
       if (condition === 'storm') {
         if (now - lastFlash > nextFlash) {
-          el.style.background = 'rgba(255, 255, 255, 0.04)'
-          setTimeout(() => { el.style.background = 'transparent' }, 100)
+          el.style.background = 'rgba(255, 255, 240, 0.12)'
+          const isDouble = Math.random() > 0.7
+          if (isDouble) {
+            setTimeout(() => { el.style.background = 'transparent' }, 80)
+            setTimeout(() => { el.style.background = 'rgba(255, 255, 240, 0.12)' }, 200)
+            setTimeout(() => { el.style.background = 'transparent' }, 280)
+          } else {
+            setTimeout(() => { el.style.background = 'transparent' }, 100)
+          }
           lastFlash = now
-          nextFlash = 8000 + Math.random() * 7000
+          nextFlash = 8000 + Math.random() * 12000
         }
       }
 
@@ -275,9 +307,11 @@ function Ambient({ condition }) {
         el.parentElement.style.opacity = '1'
       }
     }
-  }, [condition])
+  }, [condition, timeOfDay])
 
-  if (!condition || condition === 'clear' || condition === 'cloudy') return null
+  const needsAmbient = condition === 'storm' || condition === 'fog' || condition === 'snow' ||
+    (timeOfDay === 'night' && condition === 'clear')
+  if (!needsAmbient) return null
 
   return (
     <div
@@ -289,7 +323,7 @@ function Ambient({ condition }) {
         transition: 'background 0.1s ease',
       }}
     >
-      {condition === 'snow' && (
+      {(condition === 'snow' || (timeOfDay === 'night' && condition === 'clear')) && (
         <canvas
           width={390}
           height={680}
@@ -454,7 +488,7 @@ export function Tree() {
         })}
       </div>
       <Particles type={visuals.particles} layer="front" W={W} H={H} segs={segs} tips={tips} />
-      <Ambient condition={visuals.condition} />
+      <Ambient condition={visuals.condition} timeOfDay={visuals.timeOfDay} />
       <p className={`${styles.hint} ${hintVisible ? '' : styles.hintHidden}`}>
         tap a leaf to read
       </p>
