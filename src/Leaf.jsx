@@ -27,8 +27,10 @@ export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palett
   const dur = `${(baseDur * swayMultiplier).toFixed(2)}s`
   const del = isNew ? '0s' : `${(r() * -5).toFixed(1)}s`
 
-  const left = `${((tipX + ox) / W * 100).toFixed(2)}%`
-  const top  = `${((tipY + oy) / H * 100).toFixed(2)}%`
+  const clampedX = Math.max(10, Math.min(W - 10, tipX + ox))
+  const clampedY = Math.max(10, Math.min(H - 10, tipY + oy))
+  const left = `${(clampedX / W * 100).toFixed(2)}%`
+  const top  = `${(clampedY / H * 100).toFixed(2)}%`
 
   // subtle shape variation — same base, slightly different proportions
   const scaleX = (0.85 + r() * 0.30).toFixed(2)

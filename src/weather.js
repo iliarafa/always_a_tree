@@ -11,15 +11,11 @@ function wmoToCondition(code) {
   return 'cloudy'
 }
 
-function computeTimeOfDay(sunriseStr, sunsetStr) {
-  if (!sunriseStr || !sunsetStr) return 'day'
-  const now = Date.now()
-  const sunrise = new Date(sunriseStr).getTime()
-  const sunset = new Date(sunsetStr).getTime()
-  const margin = 40 * 60 * 1000
-  if (now >= sunrise - margin && now < sunrise + margin) return 'dawn'
-  if (now >= sunrise + margin && now < sunset - margin) return 'day'
-  if (now >= sunset - margin && now < sunset + margin) return 'dusk'
+function computeTimeOfDay() {
+  const h = new Date().getHours()
+  if (h >= 5 && h < 7) return 'dawn'
+  if (h >= 7 && h < 18) return 'day'
+  if (h >= 18 && h < 20) return 'dusk'
   return 'night'
 }
 
@@ -60,7 +56,7 @@ function inkColor(timeOfDay, condition) {
     : { r: 42, g: 38, b: 34 }
 }
 
-function weatherToVisuals(tempC, condition, windspeedKmh, sunriseStr, sunsetStr) {
+function weatherToVisuals(tempC, condition, windspeedKmh) {
   // --- muted ink-wash leaf palettes ---
   const palettes = {
     summer: [
@@ -135,7 +131,7 @@ function weatherToVisuals(tempC, condition, windspeedKmh, sunriseStr, sunsetStr)
   if (condition === 'snow') particles = 'snow'
   if (condition === 'fog') particles = 'fog'
 
-  const timeOfDay = computeTimeOfDay(sunriseStr, sunsetStr)
+  const timeOfDay = computeTimeOfDay()
 
   return {
     palette,
@@ -149,6 +145,10 @@ function weatherToVisuals(tempC, condition, windspeedKmh, sunriseStr, sunsetStr)
   }
 }
 
+export function defaultVisuals() {
+  return weatherToVisuals(15, 'clear', 5)
+}
+
 export async function fetchWeatherVisuals() {
   try {
     const coords = await new Promise((resolve, reject) => {
@@ -160,14 +160,13 @@ export async function fetchWeatherVisuals() {
       )
     })
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weathercode,windspeed_10m,is_day&daily=sunrise,sunset&timezone=auto`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,weathercode,windspeed_10m&timezone=auto`
     const res = await fetch(url)
     const data = await res.json()
     const { temperature_2m: temp, weathercode: code, windspeed_10m: wind } = data.current
-    const { sunrise: [sunriseStr], sunset: [sunsetStr] } = data.daily
     const condition = wmoToCondition(code)
-    return weatherToVisuals(temp, condition, wind, sunriseStr, sunsetStr)
+    return weatherToVisuals(temp, condition, wind)
   } catch (_) {
-    return weatherToVisuals(15, 'clear', 5, null, null)
+    return weatherToVisuals(15, 'clear', 5)
   }
 }

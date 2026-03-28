@@ -3,7 +3,7 @@ import { Leaf } from './Leaf'
 import { Particles } from './Particles'
 import { useTree } from './useTree'
 import { db, THREE_DAYS_AGO } from './supabase'
-import { fetchWeatherVisuals } from './weather'
+import { fetchWeatherVisuals, defaultVisuals } from './weather'
 import { Haptics, ImpactStyle } from '@capacitor/haptics'
 import styles from './Tree.module.css'
 
@@ -11,19 +11,7 @@ async function haptic(style = ImpactStyle.Medium) {
   try { await Haptics.impact({ style }) } catch (_) {}
 }
 
-const DEFAULT_VISUALS = {
-  palette: [
-    { f: '#8aaa7e', v: '#4a5e42' },
-    { f: '#a3b89a', v: '#5a6e52' },
-    { f: '#6b8c62', v: '#3d5235' },
-  ],
-  bg: 'linear-gradient(to bottom, #87CEEB, #d4eaf7)',
-  swayMultiplier: 1,
-  particles: 'none',
-  condition: 'clear',
-  timeOfDay: 'day',
-  ink: { r: 42, g: 38, b: 34 },
-}
+const DEFAULT_VISUALS = defaultVisuals()
 
 function getSession() {
   let id = localStorage.getItem('tree_session')
@@ -78,50 +66,68 @@ function drawStars(cx, W, H) {
   }
 }
 
-function drawSun(cx, W, condition) {
+function drawSun(cx, W, H, condition) {
   const x = W * 0.78
-  const y = 65
+  const y = 110
   const isCloudy = condition === 'cloudy'
   const radius = isCloudy ? 55 : 40
   const alpha = isCloudy ? 0.4 : 0.9
 
-  const grd = cx.createRadialGradient(x, y, 0, x, y, radius)
+  // compensate for canvas stretch — scale Y so circles stay round
+  const displayW = cx.canvas.clientWidth || W
+  const displayH = cx.canvas.clientHeight || H
+  const sy = (H / W) * (displayW / displayH)
+  cx.save()
+  cx.translate(x, y)
+  cx.scale(1, sy)
+
+  const grd = cx.createRadialGradient(0, 0, 0, 0, 0, radius)
   grd.addColorStop(0, `rgba(255, 220, 100, ${alpha})`)
   grd.addColorStop(0.4, `rgba(255, 200, 60, ${alpha * 0.4})`)
   grd.addColorStop(1, 'rgba(255, 200, 60, 0)')
   cx.fillStyle = grd
   cx.beginPath()
-  cx.arc(x, y, radius, 0, Math.PI * 2)
+  cx.arc(0, 0, radius, 0, Math.PI * 2)
   cx.fill()
+  cx.restore()
 }
 
-function drawMoon(cx, W, condition) {
+function drawMoon(cx, W, H, condition) {
   const x = W * 0.22
-  const y = 55
+  const y = 110
   const r = 18
   const isCloudy = condition === 'cloudy'
   const alpha = isCloudy ? 0.4 : 0.85
 
+  // compensate for canvas stretch — scale Y so circles stay round
+  const displayW = cx.canvas.clientWidth || W
+  const displayH = cx.canvas.clientHeight || H
+  const sy = (H / W) * (displayW / displayH)
+  cx.save()
+  cx.translate(x, y)
+  cx.scale(1, sy)
+
   // glow halo
-  const glow = cx.createRadialGradient(x, y, r * 0.5, x, y, r * 2.5)
+  const glow = cx.createRadialGradient(0, 0, r * 0.5, 0, 0, r * 2.5)
   glow.addColorStop(0, `rgba(200, 210, 230, ${(alpha * 0.2).toFixed(2)})`)
   glow.addColorStop(1, 'rgba(200, 210, 230, 0)')
   cx.fillStyle = glow
   cx.beginPath()
-  cx.arc(x, y, r * 2.5, 0, Math.PI * 2)
+  cx.arc(0, 0, r * 2.5, 0, Math.PI * 2)
   cx.fill()
 
   // bright disc
   cx.beginPath()
-  cx.arc(x, y, r, 0, Math.PI * 2)
+  cx.arc(0, 0, r, 0, Math.PI * 2)
   cx.fillStyle = `rgba(220, 225, 235, ${alpha.toFixed(2)})`
   cx.fill()
 
   // dark offset for crescent
   cx.beginPath()
-  cx.arc(x + 7, y - 3, r * 0.85, 0, Math.PI * 2)
+  cx.arc(7, -3, r * 0.85, 0, Math.PI * 2)
   cx.fillStyle = '#0a0e1a'
   cx.fill()
+  cx.restore()
 }
 
 function drawStormClouds(cx, W, condition) {
@@ -158,9 +164,9 @@ function drawTree(cx, segs, W, H, condition, timeOfDay, ink) {
 
   // 2. Moon (night + clear/cloudy) or Sun (day + clear/cloudy)
   if (timeOfDay === 'night' && (condition === 'clear' || condition === 'cloudy')) {
-    drawMoon(cx, W, condition)
+    drawMoon(cx, W, H, condition)
   } else if (timeOfDay === 'day' && (condition === 'clear' || condition === 'cloudy')) {
-    drawSun(cx, W, condition)
+    drawSun(cx, W, H, condition)
   }
 
   // 3. Storm/rain clouds
