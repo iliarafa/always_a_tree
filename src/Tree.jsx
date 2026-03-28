@@ -88,6 +88,7 @@ function drawTree(cx, segs, W, H, sky, ground) {
 
 export function Tree() {
   const canvasRef = useRef()
+  const inputRef = useRef()
   const { segs, tips, W, H } = useTree()
   const [leaves, setLeaves] = useState([])
   const [thought, setThought] = useState('')
@@ -139,6 +140,12 @@ export function Tree() {
     const t = setTimeout(() => setHintVisible(false), 4000)
     return () => clearTimeout(t)
   }, [])
+
+  useEffect(() => {
+    if (inputOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [inputOpen])
 
   const addLeaf = useCallback((row, isNew = false) => {
     if (placedIds.current.has(row.id)) return
@@ -232,6 +239,7 @@ export function Tree() {
         </svg>
         <div className={`${styles.inputWrap} ${inputOpen ? styles.inputWrapOpen : ''}`}>
           <input
+            ref={inputRef}
             className={styles.input}
             type="text"
             value={thought}
