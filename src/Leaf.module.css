@@ -15,10 +15,10 @@
   100% { opacity: 1; filter: blur(0px); }
 }
 
-@keyframes sway1 { 0%, 100% { rotate: -2deg; } 50% { rotate: 2deg; } }
-@keyframes sway2 { 0%, 100% { rotate: 1.5deg; } 50% { rotate: -2.5deg; } }
-@keyframes sway3 { 0%, 100% { rotate: -1deg; } 50% { rotate: 3deg; } }
-@keyframes sway4 { 0%, 100% { rotate: 2.5deg; } 50% { rotate: -1.5deg; } }
+@keyframes sway1 { 0%, 100% { rotate: -4deg; translate: -2px 0; } 50% { rotate: 5deg; translate: 2px 0; } }
+@keyframes sway2 { 0%, 100% { rotate: 3deg; translate: 1px 0; } 50% { rotate: -6deg; translate: -2px 0; } }
+@keyframes sway3 { 0%, 100% { rotate: -3deg; translate: -1px 0; } 50% { rotate: 6deg; translate: 2px 0; } }
+@keyframes sway4 { 0%, 100% { rotate: 5deg; translate: 2px 0; } 50% { rotate: -4deg; translate: -1px 0; } }
 
 .tooltip {
   position: absolute;

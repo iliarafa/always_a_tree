@@ -13,22 +13,31 @@ function seededRng(id) {
   return { r, seed: s }
 }
 
-export function Leaf({ row, sessionId, tipX, tipY, W, H, isNew, palette, swayMultiplier = 1 }) {
+export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palette, swayMultiplier = 1 }) {
   const [tooltip, setTooltip] = useState(false)
   const mine = row.session_id === sessionId
 
   const { r, seed } = seededRng(row.id)
   const ox = (r() - .5) * 22
-  const oy = (r() - .5) * 16
+  const oy = r() * 18 // biased downward — always at or below tip
 
   const color = palette[Math.abs(seed) % palette.length]
   const animIdx = Math.abs(seed) % 4
-  const baseDur = 3.5 + r() * 2 // slower base: 3.5–5.5s
+  const baseDur = 3.5 + r() * 2
   const dur = `${(baseDur * swayMultiplier).toFixed(2)}s`
   const del = isNew ? '0s' : `${(r() * -5).toFixed(1)}s`
 
   const left = `${((tipX + ox) / W * 100).toFixed(2)}%`
   const top  = `${((tipY + oy) / H * 100).toFixed(2)}%`
+
+  // subtle shape variation — same base, slightly different proportions
+  const scaleX = (0.85 + r() * 0.30).toFixed(2)
+  const scaleY = (0.90 + r() * 0.20).toFixed(2)
+
+  // dangle rotation from branch angle
+  const baseRotDeg = tipAngle != null
+    ? (tipAngle * 180 / Math.PI + 90 + (r() - 0.5) * 20).toFixed(1)
+    : ((r() - 0.5) * 20).toFixed(1)
 
   // ink-wash variation per leaf
   const blurAmount = (0.3 + r() * 0.5).toFixed(2)
@@ -74,7 +83,12 @@ export function Leaf({ row, sessionId, tipX, tipY, W, H, isNew, palette, swayMul
             <feGaussianBlur stdDeviation={blurAmount} />
           </filter>
         </defs>
-        <g filter={`url(#${filterId})`} opacity={leafOpacity}>
+        <g
+          filter={`url(#${filterId})`}
+          opacity={leafOpacity}
+          transform={`rotate(${baseRotDeg}, 8, 11) scale(${scaleX}, ${scaleY})`}
+          transform-origin="8 11"
+        >
           <path
             d="M8,21C3,17,1,12,1,7C1,3,4,0,8,0C12,0,15,3,15,7C15,12,13,17,8,21Z"
             fill={color.f}

@@ -11,17 +11,30 @@ function makeRng(seed) {
 function buildTree(rng) {
   const segs = [], tips = []
   function branch(x, y, a, len, d) {
-    if (!d) { tips.push({ x, y }); return }
+    if (!d) { tips.push({ x, y, angle: a }); return }
     const ex = x + Math.cos(a) * len
     const ey = y + Math.sin(a) * len
     segs.push({ x1: x, y1: y, x2: ex, y2: ey, d })
-    const sp = .27 + rng() * .09
-    const lr = .65 + rng() * .06
-    branch(ex, ey, a - sp, len * lr, d - 1)
-    branch(ex, ey, a + sp, len * lr, d - 1)
-    if (d > 3 && rng() > .52) branch(ex, ey, a + (rng() - .5) * .4, len * lr * .8, d - 2)
+
+    // symmetric core spread with slight organic nudge
+    const sp = 0.25 + rng() * 0.10
+    const nudge = (rng() - 0.5) * 0.06
+
+    // vary length ratio per side independently (B-style unpredictability)
+    const lrL = 0.58 + rng() * 0.12
+    const lrR = 0.58 + rng() * 0.12
+
+    branch(ex, ey, a - sp + nudge, len * lrL, d - 1)
+    branch(ex, ey, a + sp + nudge, len * lrR, d - 1)
+
+    // C-style windswept outlier: occasional reaching branch
+    if (d > 3 && d < 7 && rng() > 0.75) {
+      const windDir = rng() > 0.5 ? 1 : -1
+      const windAngle = a + windDir * (0.35 + rng() * 0.25)
+      branch(ex, ey, windAngle, len * lrL * 0.9, d - 2)
+    }
   }
-  branch(W / 2, H, -Math.PI / 2, 110, 7)
+  branch(W / 2, H, -Math.PI / 2, 130, 8)
   return { segs, tips }
 }
 

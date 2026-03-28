@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300&display=swap');
+
+.landing {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 100;
+  background: #f4f0e8;
+  background-image:
+    repeating-conic-gradient(rgba(120, 110, 100, 0.03) 0% 25%, transparent 0% 50%),
+    repeating-conic-gradient(rgba(120, 110, 100, 0.02) 0% 25%, transparent 0% 50%);
+  background-size: 4px 4px, 7px 7px;
+  background-position: 0 0, 3px 3px;
+  overflow: hidden;
+  transition: opacity 0.8s ease-out;
+}
+
+.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.title {
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: clamp(1.8rem, 5vw, 3.2rem);
+  color: rgba(42, 38, 34, 0.72);
+  letter-spacing: 0.08em;
+  user-select: none;
+  position: relative;
+  animation: brushIn 1.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes brushIn {
+  0% {
+    opacity: 0;
+    letter-spacing: 0.3em;
+    filter: blur(6px);
+  }
+  100% {
+    opacity: 1;
+    letter-spacing: 0.08em;
+    filter: blur(0px);
+  }
+}
+
+/* top ink bleed — like ink seeping down from the edge of washi paper */
+.inkBleed {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30vh;
+  background: linear-gradient(
+    to bottom,
+    rgba(42, 38, 34, 0.04) 0%,
+    rgba(42, 38, 34, 0.015) 40%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* bottom ink bleed — mirrored, subtler */
+.inkBleedBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20vh;
+  background: linear-gradient(
+    to top,
+    rgba(42, 38, 34, 0.03) 0%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
