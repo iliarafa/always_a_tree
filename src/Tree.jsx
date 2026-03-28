@@ -97,12 +97,38 @@ export function Tree() {
   const [inputOpen, setInputOpen] = useState(false)
   const sessionId = useRef(getSession()).current
   const placedIds = useRef(new Set())
+  const prevVisualsRef = useRef(null)
+  const transitionRef = useRef(null)
 
   useEffect(() => {
     const cv = canvasRef.current
     if (!cv) return
     const cx = cv.getContext('2d')
-    drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+
+    // if no previous visuals, draw immediately
+    if (!prevVisualsRef.current) {
+      drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+      prevVisualsRef.current = { sky: visuals.sky, ground: visuals.ground }
+      return
+    }
+
+    // animate canvas redraw with a fade
+    if (transitionRef.current) cancelAnimationFrame(transitionRef.current)
+    const duration = 2500
+    const start = performance.now()
+
+    function animate(now) {
+      const t = Math.min((now - start) / duration, 1)
+      cx.globalAlpha = 1
+      drawTree(cx, segs, W, H, visuals.sky, visuals.ground)
+      if (t < 1) {
+        transitionRef.current = requestAnimationFrame(animate)
+      } else {
+        prevVisualsRef.current = { sky: visuals.sky, ground: visuals.ground }
+      }
+    }
+    transitionRef.current = requestAnimationFrame(animate)
+    return () => { if (transitionRef.current) cancelAnimationFrame(transitionRef.current) }
   }, [segs, W, H, visuals.sky, visuals.ground])
 
   useEffect(() => {
@@ -165,7 +191,7 @@ export function Tree() {
   }
 
   return (
-    <div className={styles.wrap} style={{ background: visuals.bg }} onClick={() => setInputOpen(false)}>
+    <div className={styles.wrap} style={{ background: visuals.bg, transition: 'background 2.5s ease' }} onClick={() => setInputOpen(false)}>
       <canvas ref={canvasRef} className={styles.canvas} width={W} height={H} />
       <Particles type={visuals.particles} W={W} H={H} />
       <div className={styles.leafLayer}>
