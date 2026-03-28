@@ -94,6 +94,7 @@ export function Tree() {
   const [status, setStatus] = useState('')
   const [hintVisible, setHintVisible] = useState(true)
   const [visuals, setVisuals] = useState(DEFAULT_VISUALS)
+  const [inputOpen, setInputOpen] = useState(false)
   const sessionId = useRef(getSession()).current
   const placedIds = useRef(new Set())
 
@@ -156,6 +157,7 @@ export function Tree() {
     }
     await haptic(ImpactStyle.Medium)
     addLeaf(data, true)
+    setInputOpen(false)
   }
 
   function handleKeyDown(e) {
@@ -163,7 +165,7 @@ export function Tree() {
   }
 
   return (
-    <div className={styles.wrap} style={{ background: visuals.bg }} onClick={() => {}}>
+    <div className={styles.wrap} style={{ background: visuals.bg }} onClick={() => setInputOpen(false)}>
       <canvas ref={canvasRef} className={styles.canvas} width={W} height={H} />
       <Particles type={visuals.particles} W={W} H={H} />
       <div className={styles.leafLayer}>
@@ -188,19 +190,34 @@ export function Tree() {
       <p className={`${styles.hint} ${hintVisible ? '' : styles.hintHidden}`}>
         tap a leaf to read
       </p>
-      <div className={styles.bottom}>
-        <input
-          className={styles.input}
-          type="text"
-          value={thought}
-          onChange={e => setThought(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="leave a thought..."
-          maxLength={120}
-          autoComplete="off"
-          spellCheck={false}
-        />
-        {status && <p className={styles.status}>{status}</p>}
+      <div className={styles.bottom} onClick={e => e.stopPropagation()}>
+        <svg
+          className={`${styles.enso} ${inputOpen ? styles.ensoHidden : ''}`}
+          width="24" height="24" viewBox="0 0 24 24"
+          onClick={() => setInputOpen(true)}
+        >
+          <path
+            d="M12,2 A10,10 0 1,1 8,3.5"
+            fill="none"
+            stroke="rgba(42, 38, 34, 0.3)"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className={`${styles.inputWrap} ${inputOpen ? styles.inputWrapOpen : ''}`}>
+          <input
+            className={styles.input}
+            type="text"
+            value={thought}
+            onChange={e => setThought(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="leave a thought..."
+            maxLength={120}
+            autoComplete="off"
+            spellCheck={false}
+          />
+          {status && <p className={styles.status}>{status}</p>}
+        </div>
       </div>
     </div>
   )
