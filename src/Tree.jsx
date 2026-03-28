@@ -31,7 +31,7 @@ function getSession() {
   return id
 }
 
-function drawInkWash(cx, W, H, intensity) {
+function drawInkWash(cx, W, H, intensity, ink) {
   // deterministic ink wash stains near canvas edges
   const rng = makeRng(27182)
   const stains = [
@@ -48,8 +48,8 @@ function drawInkWash(cx, W, H, intensity) {
     cx.translate(s.x, s.y)
     cx.rotate(rot)
     const grd = cx.createRadialGradient(0, 0, 0, 0, 0, Math.max(s.rx, s.ry))
-    grd.addColorStop(0, `rgba(42, 38, 34, ${alpha.toFixed(4)})`)
-    grd.addColorStop(1, 'rgba(42, 38, 34, 0)')
+    grd.addColorStop(0, `rgba(${ink.r}, ${ink.g}, ${ink.b}, ${alpha.toFixed(4)})`)
+    grd.addColorStop(1, `rgba(${ink.r}, ${ink.g}, ${ink.b}, 0)`)
     cx.fillStyle = grd
     cx.beginPath()
     cx.ellipse(0, 0, s.rx, s.ry, 0, 0, Math.PI * 2)
@@ -63,47 +63,139 @@ function makeRng(seed) {
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296 }
 }
 
-function drawTree(cx, segs, W, H, sky, ground, condition) {
+function drawStars(cx, W, H) {
+  const rng = makeRng(31337)
+  const count = 25
+  for (let i = 0; i < count; i++) {
+    const x = rng() * W
+    const y = rng() * H * 0.4
+    const r = 0.5 + rng() * 1.0
+    const alpha = 0.4 + rng() * 0.4
+    cx.beginPath()
+    cx.arc(x, y, r, 0, Math.PI * 2)
+    cx.fillStyle = `rgba(220, 225, 240, ${alpha.toFixed(2)})`
+    cx.fill()
+  }
+}
+
+function drawSun(cx, W, condition) {
+  const x = W * 0.78
+  const y = 65
+  const isCloudy = condition === 'cloudy'
+  const radius = isCloudy ? 55 : 40
+  const alpha = isCloudy ? 0.4 : 0.9
+
+  const grd = cx.createRadialGradient(x, y, 0, x, y, radius)
+  grd.addColorStop(0, `rgba(255, 220, 100, ${alpha})`)
+  grd.addColorStop(0.4, `rgba(255, 200, 60, ${alpha * 0.4})`)
+  grd.addColorStop(1, 'rgba(255, 200, 60, 0)')
+  cx.fillStyle = grd
+  cx.beginPath()
+  cx.arc(x, y, radius, 0, Math.PI * 2)
+  cx.fill()
+}
+
+function drawMoon(cx, W, condition) {
+  const x = W * 0.22
+  const y = 55
+  const r = 18
+  const isCloudy = condition === 'cloudy'
+  const alpha = isCloudy ? 0.4 : 0.85
+
+  // glow halo
+  const glow = cx.createRadialGradient(x, y, r * 0.5, x, y, r * 2.5)
+  glow.addColorStop(0, `rgba(200, 210, 230, ${(alpha * 0.2).toFixed(2)})`)
+  glow.addColorStop(1, 'rgba(200, 210, 230, 0)')
+  cx.fillStyle = glow
+  cx.beginPath()
+  cx.arc(x, y, r * 2.5, 0, Math.PI * 2)
+  cx.fill()
+
+  // bright disc
+  cx.beginPath()
+  cx.arc(x, y, r, 0, Math.PI * 2)
+  cx.fillStyle = `rgba(220, 225, 235, ${alpha.toFixed(2)})`
+  cx.fill()
+
+  // dark offset for crescent
+  cx.beginPath()
+  cx.arc(x + 7, y - 3, r * 0.85, 0, Math.PI * 2)
+  cx.fillStyle = '#0a0e1a'
+  cx.fill()
+}
+
+function drawStormClouds(cx, W, condition) {
+  const clouds = [
+    { x: W * 0.25, y: 50, rx: 110, ry: 45 },
+    { x: W * 0.65, y: 35, rx: 130, ry: 50 },
+    { x: W * 0.45, y: 70, rx: 100, ry: 35 },
+  ]
+  const isStorm = condition === 'storm'
+  const count = isStorm ? 3 : 2
+  const alphaBase = isStorm ? 0.7 : 0.3
+
+  for (let i = 0; i < count; i++) {
+    const c = clouds[i]
+    const grd = cx.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.max(c.rx, c.ry))
+    const alpha = alphaBase - i * 0.15
+    grd.addColorStop(0, `rgba(20, 20, 25, ${alpha.toFixed(2)})`)
+    grd.addColorStop(0.6, `rgba(40, 40, 48, ${(alpha * 0.5).toFixed(2)})`)
+    grd.addColorStop(1, 'rgba(60, 60, 68, 0)')
+    cx.fillStyle = grd
+    cx.beginPath()
+    cx.ellipse(c.x, c.y, c.rx, c.ry, 0, 0, Math.PI * 2)
+    cx.fill()
+  }
+}
+
+function drawTree(cx, segs, W, H, condition, timeOfDay, ink) {
   cx.clearRect(0, 0, W, H)
 
-  // ink wash bleed stains — weather-modulated intensity
+  // 1. Stars (night + clear only)
+  if (timeOfDay === 'night' && condition === 'clear') {
+    drawStars(cx, W, H)
+  }
+
+  // 2. Moon (night + clear/cloudy) or Sun (day + clear/cloudy)
+  if (timeOfDay === 'night' && (condition === 'clear' || condition === 'cloudy')) {
+    drawMoon(cx, W, condition)
+  } else if (timeOfDay === 'day' && (condition === 'clear' || condition === 'cloudy')) {
+    drawSun(cx, W, condition)
+  }
+
+  // 3. Storm/rain clouds
+  if (condition === 'storm' || condition === 'rain') {
+    drawStormClouds(cx, W, condition)
+  }
+
+  // 4. Ink wash stains
   const washIntensity = condition === 'storm' ? 1.8
     : condition === 'rain' ? 1.4
     : condition === 'fog' ? 1.2
     : condition === 'snow' ? 0.8
     : 1.0
-  drawInkWash(cx, W, H, washIntensity)
+  drawInkWash(cx, W, H, washIntensity, ink)
 
-  // sky wash — faint ink gradient bleeding from top
-  if (sky && sky !== 'rgba(42, 38, 34, 0.0)') {
-    const skyGrd = cx.createLinearGradient(0, 0, 0, H * 0.5)
-    skyGrd.addColorStop(0, sky)
-    skyGrd.addColorStop(1, 'rgba(0,0,0,0)')
-    cx.fillStyle = skyGrd
-    cx.fillRect(0, 0, W, H * 0.5)
-  }
-
-  // ground ink bleed — soft radial bleed at tree base
+  // 5. Ground ink bleed
   const grd = cx.createRadialGradient(W / 2, H, 0, W / 2, H, 120)
-  grd.addColorStop(0, ground)
+  grd.addColorStop(0, `rgba(${ink.r}, ${ink.g}, ${ink.b}, 0.06)`)
   grd.addColorStop(1, 'rgba(0,0,0,0)')
   cx.fillStyle = grd
   cx.fillRect(0, H - 120, W, 120)
 
-  // ink stroke branches
+  // 6. Tree branch strokes
   cx.lineCap = 'round'
   segs.forEach(s => {
-    const t = s.d / 8 // 0 at tips, 1 at trunk (depth 8 now)
-    const alpha = 0.2 + t * 0.6 // tips faint, trunk dark
-    const width = 0.4 + t * 2.2 // tips ~0.5px, trunk ~2.6px
+    const t = s.d / 8
+    const alpha = 0.2 + t * 0.6
+    const width = 0.4 + (t * t) * 4.1
 
-    // slight wobble for hand-drawn feel
     const wobble = Math.sin(s.x1 * 0.3 + s.y1 * 0.5) * 0.8
     const mx = (s.x1 + s.x2) / 2 + wobble
     const my = (s.y1 + s.y2) / 2 + wobble * 0.5
 
     cx.lineWidth = width
-    cx.strokeStyle = `rgba(42, 38, 34, ${alpha.toFixed(3)})`
+    cx.strokeStyle = `rgba(${ink.r}, ${ink.g}, ${ink.b}, ${alpha.toFixed(3)})`
     cx.beginPath()
     cx.moveTo(s.x1, s.y1)
     cx.quadraticCurveTo(mx, my, s.x2, s.y2)
