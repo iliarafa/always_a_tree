@@ -11,18 +11,20 @@
     "cap:ios": "vite build && npx cap sync && npx cap open ios"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.4",
+    "@capacitor/app": "^7.0.0",
     "@capacitor/core": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
     "@capacitor/ios": "^7.0.0",
-    "@capacitor/app": "^6.0.0",
-    "@capacitor/haptics": "^6.0.0",
-    "@capacitor/keyboard": "^6.0.0",
-    "@capacitor/status-bar": "^4.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
+    "@supabase/supabase-js": "^2.49.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.6.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^6.0.2",
     "vite": "^6.2.0"
   }
 }

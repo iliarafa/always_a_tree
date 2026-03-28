@@ -40,7 +40,7 @@
 
 .bottom {
   position: absolute;
-  bottom: 32px;
+  top: calc(env(safe-area-inset-top, 44px) + 32px);
   left: 50%;
   transform: translateX(-50%);
   width: 70%;
