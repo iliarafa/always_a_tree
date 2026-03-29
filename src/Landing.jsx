@@ -21,6 +21,7 @@ export function Landing({ onEnter, bg, ink }) {
       <div className={styles.inkBleed} />
       <h1 className={styles.title}>Always a tree.</h1>
       <div className={styles.inkBleedBottom} />
+      <span className={styles.footer}>for Zoe.</span>
     </div>
   )
 }

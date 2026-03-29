@@ -59,3 +59,16 @@
   );
   pointer-events: none;
 }
+
+.footer {
+  position: absolute;
+  bottom: 1.5rem;
+  font-family: 'Cormorant Garamond', 'Georgia', serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(var(--ink), 0.4);
+  letter-spacing: 0.06em;
+  user-select: none;
+  pointer-events: none;
+}
