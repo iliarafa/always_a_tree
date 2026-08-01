@@ -499,19 +499,13 @@ export function Tree() {
         tap a leaf to read
       </p>
       <div className={styles.bottom} onClick={e => e.stopPropagation()}>
-        <svg
-          className={`${styles.enso} ${inputOpen ? styles.ensoHidden : ''}`}
-          width="24" height="24" viewBox="0 0 24 24"
+        <button
+          type="button"
+          className={`${styles.prompt} ${inputOpen ? styles.promptHidden : ''}`}
           onClick={() => setInputOpen(true)}
         >
-          <path
-            d="M12,2 A10,10 0 1,1 8,3.5"
-            fill="none"
-            stroke={`rgba(${visuals.ink.r}, ${visuals.ink.g}, ${visuals.ink.b}, 0.3)`}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-        </svg>
+          leave a thought
+        </button>
         <div className={`${styles.inputWrap} ${inputOpen ? styles.inputWrapOpen : ''}`}>
           <input
             ref={inputRef}

@@ -45,23 +45,41 @@
   transform: translateX(-50%);
   width: 70%;
   max-width: 260px;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
   text-align: center;
 }
 
-.enso {
-  display: block;
-  margin: 0 auto;
+.prompt {
+  grid-area: 1 / 1;
+  justify-self: center;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(var(--ink), 0.2);
+  padding: 8px 0;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  color: rgba(var(--ink), 0.5);
   cursor: pointer;
   opacity: 1;
   transition: opacity 0.4s ease;
 }
 
-.ensoHidden {
+.prompt:focus-visible {
+  outline: 1px solid rgba(var(--ink), 0.4);
+  outline-offset: 3px;
+}
+
+.promptHidden {
   opacity: 0;
   pointer-events: none;
 }
 
 .inputWrap {
+  grid-area: 1 / 1;
+  justify-self: stretch;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
