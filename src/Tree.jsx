@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Leaf } from './Leaf'
+import { LeafWorld } from './LeafWorld'
 import { Particles } from './Particles'
 import { useTree } from './useTree'
 import { db, THREE_DAYS_AGO } from './supabase'
@@ -345,9 +346,12 @@ function Ambient({ condition, timeOfDay }) {
   )
 }
 
+const TIP_MARGIN = 50
+
 export function Tree() {
   const canvasRef = useRef()
   const inputRef = useRef()
+  const wrapRef = useRef()
   const { segs, tips, W, H } = useTree()
   const [leaves, setLeaves] = useState([])
   const [thought, setThought] = useState('')
@@ -355,10 +359,15 @@ export function Tree() {
   const [hintVisible, setHintVisible] = useState(true)
   const [visuals, setVisuals] = useState(DEFAULT_VISUALS)
   const [inputOpen, setInputOpen] = useState(false)
+  const [focused, setFocused] = useState(null)
   const sessionId = useRef(getSession()).current
   const placedIds = useRef(new Set())
   const prevVisualsRef = useRef(null)
   const transitionRef = useRef(null)
+  const focusedRef = useRef(null)
+  const pendingVisualsRef = useRef(null)
+
+  useEffect(() => { focusedRef.current = focused }, [focused])
 
   useEffect(() => {
     const cv = canvasRef.current
@@ -397,7 +406,12 @@ export function Tree() {
   }, [segs, W, H, visuals.condition, visuals.timeOfDay, visuals.ink])
 
   useEffect(() => {
-    fetchWeatherVisuals().then(v => setVisuals(v))
+    fetchWeatherVisuals().then(v => {
+      // don't recolor the tree under an open leaf world — the giant leaf
+      // must land on an identically-colored leaf; flush on clearFocus
+      if (focusedRef.current) pendingVisualsRef.current = v
+      else setVisuals(v)
+    })
   }, [])
 
   useEffect(() => {
@@ -412,6 +426,7 @@ export function Tree() {
   }, [inputOpen])
 
   const addLeaf = useCallback((row, isNew = false) => {
+    if (!row.thought || !row.thought.trim()) return
     if (placedIds.current.has(row.id)) return
     placedIds.current.add(row.id)
     setLeaves(prev => [...prev, { ...row, isNew }])
@@ -441,7 +456,11 @@ export function Tree() {
     const text = thought.trim()
     if (!text) return
     setThought('')
-    const tipIdx = Math.floor(Math.random() * tips.length)
+    const validIndices = tips
+      .map((t, i) => ({ t, i }))
+      .filter(({ t }) => t.x >= TIP_MARGIN && t.x <= W - TIP_MARGIN && t.y >= TIP_MARGIN && t.y <= H - TIP_MARGIN)
+      .map(({ i }) => i)
+    const tipIdx = validIndices[Math.floor(Math.random() * validIndices.length)]
     const { data, error } = await db
       .from('leaves')
       .insert({ thought: text, session_id: sessionId, tip_index: tipIdx })
@@ -461,8 +480,41 @@ export function Tree() {
     if (e.key === 'Enter') { e.preventDefault(); handleSubmit() }
   }
 
+  function openFocus(payload) {
+    if (focused) return
+    haptic(ImpactStyle.Light)
+    setInputOpen(false)
+    // camera origin for the scene push-in: tapped leaf's center in .wrap coords
+    const wrap = wrapRef.current.getBoundingClientRect()
+    setFocused({
+      payload,
+      closing: false,
+      origin: {
+        x: payload.rect.left + payload.rect.width / 2 - wrap.left,
+        y: payload.rect.top + payload.rect.height / 2 - wrap.top,
+      },
+    })
+  }
+
+  const closeFocus = useCallback(() => {
+    setFocused(f => (f && !f.closing ? { ...f, closing: true } : f))
+  }, [])
+
+  const clearFocus = useCallback(() => {
+    setFocused(null)
+    const pending = pendingVisualsRef.current
+    if (pending) {
+      pendingVisualsRef.current = null
+      // one frame later: let the giant leaf land on the old colors first
+      requestAnimationFrame(() => setVisuals(pending))
+    }
+  }, [])
+
+  const diving = focused && !focused.closing
+
   return (
     <div
+      ref={wrapRef}
       className={styles.wrap}
       style={{
         background: visuals.bg,
@@ -471,34 +523,49 @@ export function Tree() {
       }}
       onClick={() => setInputOpen(false)}
     >
-      <canvas ref={canvasRef} className={styles.canvas} width={W} height={H} />
-      <Particles type={visuals.particles} layer="back" W={W} H={H} segs={segs} tips={tips} />
-      <div className={styles.leafLayer}>
-        {leaves.map(row => {
-          const tip = tips[row.tip_index % tips.length]
-          return (
-            <Leaf
-              key={row.id}
-              row={row}
-              sessionId={sessionId}
-              tipX={tip.x}
-              tipY={tip.y}
-              tipAngle={tip.angle}
-              W={W}
-              H={H}
-              isNew={row.isNew}
-              palette={visuals.palette}
-              swayMultiplier={visuals.swayMultiplier}
-            />
-          )
-        })}
+      {/* Ambient stays outside .scene — its fog pulse writes parentElement.style.opacity */}
+      {/* inert (React 18 empty-string form): the aria-modal leaf world must
+          remove the invisible background from tab order and the a11y tree */}
+      <div
+        className={`${styles.scene} ${diving ? styles.sceneZoomed : ''}`}
+        style={focused ? { transformOrigin: `${focused.origin.x.toFixed(1)}px ${focused.origin.y.toFixed(1)}px` } : undefined}
+        inert={focused ? '' : undefined}
+      >
+        <canvas ref={canvasRef} className={styles.canvas} width={W} height={H} />
+        <Particles type={visuals.particles} layer="back" W={W} H={H} segs={segs} tips={tips} />
+        <div className={styles.leafLayer}>
+          {leaves.map(row => {
+            const tip = tips[row.tip_index % tips.length]
+            if (tip.x < TIP_MARGIN || tip.x > W - TIP_MARGIN || tip.y < TIP_MARGIN || tip.y > H - TIP_MARGIN) return null
+            return (
+              <Leaf
+                key={row.id}
+                row={row}
+                tipX={tip.x}
+                tipY={tip.y}
+                tipAngle={tip.angle}
+                W={W}
+                H={H}
+                isNew={row.isNew}
+                palette={visuals.palette}
+                swayMultiplier={visuals.swayMultiplier}
+                onOpen={openFocus}
+                hidden={focused?.payload.row.id === row.id}
+              />
+            )
+          })}
+        </div>
+        <Particles type={visuals.particles} layer="front" W={W} H={H} segs={segs} tips={tips} />
       </div>
-      <Particles type={visuals.particles} layer="front" W={W} H={H} segs={segs} tips={tips} />
       <Ambient condition={visuals.condition} timeOfDay={visuals.timeOfDay} />
-      <p className={`${styles.hint} ${hintVisible ? '' : styles.hintHidden}`}>
+      <p className={`${styles.hint} ${hintVisible ? '' : styles.hintHidden} ${diving ? styles.chromeHidden : ''}`}>
         tap a leaf to read
       </p>
-      <div className={styles.bottom} onClick={e => e.stopPropagation()}>
+      <div
+        className={`${styles.bottom} ${diving ? styles.chromeHidden : ''}`}
+        inert={focused ? '' : undefined}
+        onClick={e => e.stopPropagation()}
+      >
         <button
           type="button"
           className={`${styles.prompt} ${inputOpen ? styles.promptHidden : ''}`}
@@ -522,6 +589,15 @@ export function Tree() {
           {status && <p className={styles.status}>{status}</p>}
         </div>
       </div>
+      {focused && (
+        <LeafWorld
+          {...focused.payload}
+          closing={focused.closing}
+          onClose={closeFocus}
+          onClosed={clearFocus}
+          wrapRef={wrapRef}
+        />
+      )}
     </div>
   )
 }

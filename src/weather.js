@@ -23,7 +23,7 @@ function skyGradient(timeOfDay, condition) {
   const clearSky = {
     day:   'linear-gradient(to bottom, #87CEEB, #d4eaf7)',
     dawn:  'linear-gradient(to bottom, #f7b267, #f7d6a8, #87CEEB)',
-    dusk:  'linear-gradient(to bottom, #e85d4a, #f0a060, #2a2a4a)',
+    dusk:  'linear-gradient(to bottom, #c98a76, #d9b898, #5e5c74)',
     night: 'linear-gradient(to bottom, #0a0e1a, #141830)',
   }
   const weatherDay = {
