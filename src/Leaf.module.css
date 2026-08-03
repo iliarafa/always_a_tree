@@ -23,6 +23,10 @@
   inset: -10px;
 }
 
+/* ambience recolor crossfade — matches the 2.5s sky transition in Tree.jsx */
+.leaf path { transition: fill 2.5s ease, stroke 2.5s ease; }
+.leaf g    { transition: opacity 2.5s ease; }
+
 /* :global() — Leaf.jsx sets animationName from JS strings, so these names
    must not be scoped by CSS modules (scoped they never match and sway dies) */
 @keyframes :global(inkBloom) {

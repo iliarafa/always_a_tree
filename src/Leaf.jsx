@@ -8,7 +8,7 @@ function seededRng(id) {
   return { r, seed: s }
 }
 
-export function Leaf({ row, tipX, tipY, tipAngle, W, H, isNew, palette, swayMultiplier = 1, onOpen, hidden }) {
+export function Leaf({ row, tipX, tipY, tipAngle, W, H, isNew, palette, leafAlpha = { base: 0.4, spread: 0.3 }, swayMultiplier = 1, onOpen, hidden }) {
   const { r, seed } = seededRng(row.id)
   const ox = (r() - .5) * 6
   const oy = r() * 4
@@ -34,7 +34,7 @@ export function Leaf({ row, tipX, tipY, tipAngle, W, H, isNew, palette, swayMult
 
   // ink-wash variation per leaf
   const blurAmount = (0.3 + r() * 0.5).toFixed(2)
-  const leafOpacity = (0.4 + r() * 0.3).toFixed(2)
+  const leafOpacity = (leafAlpha.base + r() * leafAlpha.spread).toFixed(2)
   const turbSeed = Math.abs(seed) % 100
   const filterId = `inkWash-${row.id}`
 

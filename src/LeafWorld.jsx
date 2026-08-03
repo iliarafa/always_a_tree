@@ -1,17 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { VEINS } from './leafShapes'
+import { mixHex } from './color'
 import styles from './LeafWorld.module.css'
 
 // keep in sync with the exit transition durations in LeafWorld.module.css
 const OUT_MS = 550
-
-// linear mix between two hex colors, t in [0,1]
-function mix(hexA, hexB, t) {
-  const a = parseInt(hexA.slice(1), 16)
-  const b = parseInt(hexB.slice(1), 16)
-  const ch = sh => Math.round(((a >> sh) & 255) + (((b >> sh) & 255) - ((a >> sh) & 255)) * t)
-  return `rgb(${ch(16)}, ${ch(8)}, ${ch(0)})`
-}
 
 // map any angle into (-180, 180] so the fly-in takes the shortest rotational path
 function normDeg(deg) {
@@ -100,11 +93,11 @@ export function LeafWorld({ row, rect, swayRot, shape, color, baseRotDeg, closin
         '--s': pose.s.toFixed(4),
         '--rot': `${pose.rot.toFixed(1)}deg`,
         '--leaf': color.f,
-        '--l0': mix(color.f, '#ffffff', 0.55),
-        '--l1': mix(color.f, '#ffffff', 0.15),
-        '--l2': mix(color.f, color.v, 0.45),
-        '--vein': mix(color.v, color.f, 0.3),
-        '--text': mix(color.v, '#1a1613', 0.35),
+        '--l0': mixHex(color.f, '#ffffff', 0.55),
+        '--l1': mixHex(color.f, '#ffffff', 0.15),
+        '--l2': mixHex(color.f, color.v, 0.45),
+        '--vein': mixHex(color.v, color.f, 0.3),
+        '--text': mixHex(color.v, '#1a1613', 0.35),
       }}
     >
       <div className={styles.backdrop} />

@@ -548,6 +548,7 @@ export function Tree() {
                 H={H}
                 isNew={row.isNew}
                 palette={visuals.palette}
+                leafAlpha={visuals.leafAlpha}
                 swayMultiplier={visuals.swayMultiplier}
                 onOpen={openFocus}
                 hidden={focused?.payload.row.id === row.id}
