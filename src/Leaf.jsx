@@ -1,10 +1,5 @@
-import { useState } from 'react'
-import { Haptics, ImpactStyle } from '@capacitor/haptics'
+import { LEAF_SHAPES, VEINS } from './leafShapes'
 import styles from './Leaf.module.css'
-
-async function haptic(style = ImpactStyle.Light) {
-  try { await Haptics.impact({ style }) } catch (_) {}
-}
 
 function seededRng(id) {
   let s = 0
@@ -13,24 +8,20 @@ function seededRng(id) {
   return { r, seed: s }
 }
 
-export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palette, swayMultiplier = 1 }) {
-  const [tooltip, setTooltip] = useState(false)
-  const mine = row.session_id === sessionId
-
+export function Leaf({ row, tipX, tipY, tipAngle, W, H, isNew, palette, leafAlpha = { base: 0.4, spread: 0.3 }, swayMultiplier = 1, onOpen, hidden }) {
   const { r, seed } = seededRng(row.id)
-  const ox = (r() - .5) * 22
-  const oy = r() * 18 // biased downward — always at or below tip
+  const ox = (r() - .5) * 6
+  const oy = r() * 4
 
+  const leafShape = LEAF_SHAPES[Math.abs(seed) % LEAF_SHAPES.length]
   const color = palette[Math.abs(seed) % palette.length]
   const animIdx = Math.abs(seed) % 4
   const baseDur = 3.5 + r() * 2
   const dur = `${(baseDur * swayMultiplier).toFixed(2)}s`
   const del = isNew ? '0s' : `${(r() * -5).toFixed(1)}s`
 
-  const clampedX = Math.max(10, Math.min(W - 10, tipX + ox))
-  const clampedY = Math.max(10, Math.min(H - 10, tipY + oy))
-  const left = `${(clampedX / W * 100).toFixed(2)}%`
-  const top  = `${(clampedY / H * 100).toFixed(2)}%`
+  const left = `${((tipX + ox) / W * 100).toFixed(2)}%`
+  const top  = `${((tipY + oy) / H * 100).toFixed(2)}%`
 
   // subtle shape variation — same base, slightly different proportions
   const scaleX = (0.85 + r() * 0.30).toFixed(2)
@@ -43,7 +34,7 @@ export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palett
 
   // ink-wash variation per leaf
   const blurAmount = (0.3 + r() * 0.5).toFixed(2)
-  const leafOpacity = (0.4 + r() * 0.3).toFixed(2)
+  const leafOpacity = (leafAlpha.base + r() * leafAlpha.spread).toFixed(2)
   const turbSeed = Math.abs(seed) % 100
   const filterId = `inkWash-${row.id}`
 
@@ -55,17 +46,39 @@ export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palett
   const animIter = isNew ? `1, infinite` : 'infinite'
   const animFill = isNew ? `forwards, none` : 'none'
 
-  function handleClick(e) {
+  function handleOpen(e) {
     e.stopPropagation()
-    if (mine && row.thought) {
-      haptic(ImpactStyle.Light)
-      setTooltip(v => !v)
+    if (!row.thought) return
+    const el = e.currentTarget
+    // a neighbor's invisible ::after tap halo can sit above this leaf's
+    // painted body — for real pointer taps, prefer the leaf actually under
+    // the point (forwarded .click() is untrusted, so it can't loop)
+    const ne = e.nativeEvent
+    if (ne?.isTrusted && typeof ne.clientX === 'number') {
+      const hitPath = document.elementsFromPoint(ne.clientX, ne.clientY)
+        .find(n => n instanceof SVGPathElement)
+      const owner = hitPath && hitPath.closest(`.${styles.leaf}`)
+      if (owner && owner !== el) { owner.click(); return }
+    }
+    // single read pass, before any state change
+    const rect = el.getBoundingClientRect()
+    const swayRot = parseFloat(getComputedStyle(el).rotate) || 0
+    onOpen({ row, rect, swayRot, shape: leafShape, color, baseRotDeg: Number(baseRotDeg) })
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      handleOpen(e)
     }
   }
 
   return (
     <div
-      className={`${styles.leaf} ${mine ? styles.mine : ''}`}
+      className={styles.leaf}
+      role="button"
+      tabIndex={0}
+      aria-label="read a thought"
       style={{
         left, top,
         animationName: animName,
@@ -74,10 +87,12 @@ export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palett
         animationIterationCount: animIter,
         animationFillMode: animFill,
         animationTimingFunction: 'ease-in-out',
+        ...(hidden ? { visibility: 'hidden', animationPlayState: 'paused' } : null),
       }}
-      onClick={handleClick}
+      onClick={handleOpen}
+      onKeyDown={handleKeyDown}
     >
-      <svg width="16" height="22" viewBox="0 0 16 22" style={{ overflow: 'visible' }}>
+      <svg width="14" height="26" viewBox="0 0 14 26" style={{ overflow: 'visible' }}>
         <defs>
           <filter id={filterId} x="-20%" y="-20%" width="140%" height="140%">
             <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="3" seed={turbSeed} result="noise" />
@@ -88,21 +103,19 @@ export function Leaf({ row, sessionId, tipX, tipY, tipAngle, W, H, isNew, palett
         <g
           filter={`url(#${filterId})`}
           opacity={leafOpacity}
-          transform={`rotate(${baseRotDeg}, 8, 11) scale(${scaleX}, ${scaleY})`}
-          transform-origin="8 11"
+          transform={`rotate(${baseRotDeg}, 7, 13) scale(${scaleX}, ${scaleY})`}
+          transform-origin="7 13"
         >
-          <path
-            d="M8,21C3,17,1,12,1,7C1,3,4,0,8,0C12,0,15,3,15,7C15,12,13,17,8,21Z"
-            fill={color.f}
-          />
-          <line x1="8" y1="21" x2="8" y2="2" stroke={color.v} strokeWidth=".8" opacity=".4" />
+          {/* leaf body */}
+          <path d={leafShape} fill={color.f} />
+          {/* thin sketched outline */}
+          <path d={leafShape} fill="none" stroke={color.v} strokeWidth=".5" opacity=".35" />
+          {/* veins — midrib + curved side branches */}
+          {VEINS.map((v, i) => (
+            <path key={i} d={v.d} fill="none" stroke={color.v} strokeWidth={v.w} opacity={v.o} />
+          ))}
         </g>
       </svg>
-      {mine && tooltip && row.thought && (
-        <div className={styles.tooltip} onClick={e => e.stopPropagation()}>
-          {row.thought}
-        </div>
-      )}
     </div>
   )
 }

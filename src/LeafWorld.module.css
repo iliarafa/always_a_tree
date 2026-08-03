@@ -1,0 +1,130 @@
+/* fullscreen "inside the leaf" view — all motion is transform/opacity
+   transitions keyed off .open (class removal auto-reverses mid-flight) */
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  font-family: Georgia, serif;
+}
+
+/* light through the canopy — sun upper-left; fading this in IS the crossfade */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 100% at 38% 30%, var(--l0), var(--l1) 45%, var(--l2) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease; /* exit */
+}
+
+.open .backdrop {
+  opacity: 1;
+  transition: opacity 0.45s ease 0.3s; /* enter — completes as the silhouette exceeds the frame */
+}
+
+/* the transform target: authored at final size, scaled down to the leaf rect */
+.zoomLeaf {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  transform-origin: 50% 50%;
+  transform: translate(var(--tx), var(--ty)) rotate(var(--rot)) scale(var(--s));
+  transition: transform 0.55s cubic-bezier(0.5, 0, 0.15, 1); /* exit — decelerates onto the branch */
+}
+
+.open .zoomLeaf {
+  transform: none;
+  /* steep-middle bezier reads as constant camera speed (scale is multiplicative) */
+  transition: transform 0.8s cubic-bezier(0.7, 0, 0.2, 1);
+}
+
+/* silhouette edges leave the frame; vein structure fills the view.
+   overflow visible: at the tiny start pose the slice viewport must not
+   crop the artwork to a sliver — the whole mini leaf should show */
+.leafSvg {
+  position: absolute;
+  inset: -22%;
+  width: 144%;
+  height: 144%;
+  overflow: visible;
+}
+
+/* breathing light */
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(80% 60% at 50% 42%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%);
+  opacity: 0;
+}
+
+.open .glow {
+  animation: leafBreath 7s ease-in-out infinite;
+}
+
+@keyframes leafBreath {
+  0%, 100% { opacity: 0.06; }
+  50%      { opacity: 0.13; }
+}
+
+.thought {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 14vh 9vw calc(env(safe-area-inset-bottom) + 14vh);
+  pointer-events: none;
+  opacity: 0;
+  filter: blur(3px);
+  transform: translateY(6px);
+  transition: opacity 0.2s ease-in, filter 0.2s ease-in, transform 0.2s ease-in; /* exit — text leaves first */
+}
+
+.open .thought {
+  opacity: 0.93;
+  filter: blur(0);
+  transform: none;
+  /* ink-bloom vocabulary, as a transition */
+  transition: opacity 0.6s ease 0.45s, filter 0.6s ease 0.45s, transform 0.6s ease 0.45s;
+}
+
+.thought p {
+  margin: 0;
+  max-width: 26ch;
+  font-style: italic;
+  font-size: clamp(19px, 5.5vw, 28px);
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zoomLeaf,
+  .open .zoomLeaf {
+    transform: none;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .open .zoomLeaf {
+    opacity: 1;
+  }
+
+  .backdrop,
+  .open .backdrop,
+  .thought,
+  .open .thought {
+    transition-duration: 0.25s;
+    transition-delay: 0s;
+  }
+
+  .thought {
+    filter: none;
+    transform: none;
+  }
+}

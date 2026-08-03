@@ -1,3 +1,5 @@
+import { mixHex } from './color'
+
 // WMO weather interpretation codes → condition
 function wmoToCondition(code) {
   if (code === 0) return 'clear'
@@ -23,7 +25,7 @@ function skyGradient(timeOfDay, condition) {
   const clearSky = {
     day:   'linear-gradient(to bottom, #87CEEB, #d4eaf7)',
     dawn:  'linear-gradient(to bottom, #f7b267, #f7d6a8, #87CEEB)',
-    dusk:  'linear-gradient(to bottom, #e85d4a, #f0a060, #2a2a4a)',
+    dusk:  'linear-gradient(to bottom, #c98a76, #d9b898, #5e5c74)',
     night: 'linear-gradient(to bottom, #0a0e1a, #141830)',
   }
   const weatherDay = {
@@ -56,8 +58,34 @@ function inkColor(timeOfDay, condition) {
     : { r: 42, g: 38, b: 34 }
 }
 
+// ambience adaptation — leaves must stay comfortably visible on every sky.
+// MOON is the moon-disc color drawMoon paints (leaves borrow the moon's own
+// light; the cool tint separates foliage from the warm light trunk ink).
+// UMBER darkens+warms leaves on the light golden dawn/dusk skies (backlit
+// silhouette) — never lighten toward a light sky.
+const MOON = '#dce1e6'
+const UMBER = '#6e4632'
+
+// tiers follow the sky table in skyGradient, NOT inkColor's predicate:
+// dusk+cloudy etc. reuse the LIGHT day gradients, so only night/storm are
+// dark, and only clear dawn/dusk differ from day.
+function adaptPalette(palette, timeOfDay, condition) {
+  const dark = timeOfDay === 'night' || condition === 'storm'
+  const twilight = !dark && condition === 'clear' &&
+    (timeOfDay === 'dawn' || timeOfDay === 'dusk')
+  const [tint, tf, tv, base, spread] =
+    dark ? [MOON, 0.55, 0.15, 0.65, 0.25]
+      : twilight ? [UMBER, 0.25, 0.15, 0.55, 0.30]
+        : [null, 0, 0, 0.40, 0.30]
+  const adapted = tint
+    ? palette.map(c => ({ f: mixHex(c.f, tint, tf), v: mixHex(c.v, tint, tv) }))
+    : palette
+  return { palette: adapted, leafAlpha: { base, spread } }
+}
+
 function weatherToVisuals(tempC, condition, windspeedKmh) {
   // --- muted ink-wash leaf palettes ---
+  // entries must stay 7-char hex — LeafWorld parses them via slice(1)
   const palettes = {
     summer: [
       { f: '#8aaa7e', v: '#4a5e42' },
@@ -100,6 +128,8 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
     ],
   }
 
+  const timeOfDay = computeTimeOfDay()
+
   // temperature → base season
   let season
   if (tempC > 20) season = 'summer'
@@ -108,15 +138,18 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
   else season = 'winter'
 
   // condition overrides
-  let palette
-  if (condition === 'snow') palette = palettes.snow
-  else if (condition === 'storm') palette = palettes.storm
-  else if (condition === 'fog') palette = palettes.fog
+  let basePalette
+  if (condition === 'snow') basePalette = palettes.snow
+  else if (condition === 'storm') basePalette = palettes.storm
+  else if (condition === 'fog') basePalette = palettes.fog
   else if (condition === 'rain') {
-    palette = palettes[season].map(c => ({ ...c }))
+    basePalette = palettes[season].map(c => ({ ...c }))
   } else {
-    palette = palettes[season]
+    basePalette = palettes[season]
   }
+
+  // ambience adaptation — moonlit at night/storm, umber at golden hour
+  const { palette, leafAlpha } = adaptPalette(basePalette, timeOfDay, condition)
 
   // --- sway speed multiplier from wind ---
   const swayMultiplier = windspeedKmh < 10
@@ -131,10 +164,9 @@ function weatherToVisuals(tempC, condition, windspeedKmh) {
   if (condition === 'snow') particles = 'snow'
   if (condition === 'fog') particles = 'fog'
 
-  const timeOfDay = computeTimeOfDay()
-
   return {
     palette,
+    leafAlpha,
     bg: skyGradient(timeOfDay, condition),
     swayMultiplier,
     particles,
