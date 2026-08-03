@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Leaf } from './Leaf'
 import { LeafWorld } from './LeafWorld'
 import { Particles } from './Particles'
@@ -353,6 +353,10 @@ export function Tree() {
   const inputRef = useRef()
   const wrapRef = useRef()
   const { segs, tips, W, H } = useTree()
+  const validTipIndices = useMemo(() => tips
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) => t.x >= TIP_MARGIN && t.x <= W - TIP_MARGIN && t.y >= TIP_MARGIN && t.y <= H - TIP_MARGIN)
+    .map(({ i }) => i), [tips, W, H])
   const [leaves, setLeaves] = useState([])
   const [thought, setThought] = useState('')
   const [status, setStatus] = useState('')
@@ -456,11 +460,7 @@ export function Tree() {
     const text = thought.trim()
     if (!text) return
     setThought('')
-    const validIndices = tips
-      .map((t, i) => ({ t, i }))
-      .filter(({ t }) => t.x >= TIP_MARGIN && t.x <= W - TIP_MARGIN && t.y >= TIP_MARGIN && t.y <= H - TIP_MARGIN)
-      .map(({ i }) => i)
-    const tipIdx = validIndices[Math.floor(Math.random() * validIndices.length)]
+    const tipIdx = validTipIndices[Math.floor(Math.random() * validTipIndices.length)]
     const { data, error } = await db
       .from('leaves')
       .insert({ thought: text, session_id: sessionId, tip_index: tipIdx })
@@ -535,8 +535,13 @@ export function Tree() {
         <Particles type={visuals.particles} layer="back" W={W} H={H} segs={segs} tips={tips} />
         <div className={styles.leafLayer}>
           {leaves.map(row => {
-            const tip = tips[row.tip_index % tips.length]
-            if (tip.x < TIP_MARGIN || tip.x > W - TIP_MARGIN || tip.y < TIP_MARGIN || tip.y > H - TIP_MARGIN) return null
+            // rows from before the margin existed (or from stale clients) may
+            // point at an edge tip — remap deterministically so every client
+            // shows the same leaf at the same valid tip
+            let tip = tips[row.tip_index % tips.length]
+            if (tip.x < TIP_MARGIN || tip.x > W - TIP_MARGIN || tip.y < TIP_MARGIN || tip.y > H - TIP_MARGIN) {
+              tip = tips[validTipIndices[row.tip_index % validTipIndices.length]]
+            }
             return (
               <Leaf
                 key={row.id}
